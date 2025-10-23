@@ -1,6 +1,6 @@
 {
   "name": "@poyesis/pmt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Poyesis Management Tools CLI",
   "bin": {
     "pmt": "dist/index.js"
