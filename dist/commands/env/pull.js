@@ -1,0 +1,34 @@
+import { safeLoadConfigObj, saveConfigObj } from "../../core/io.js";
+import { makeLogger, pullToFile, upsertEnvMapping } from "./shared.js";
+export default async function doPull(F, secretArg, logger) {
+    const log = logger ?? makeLogger(F.quiet);
+    // Single secret mode: pmt env pull <secret>
+    if (typeof secretArg === "string" && secretArg.trim() !== "") {
+        const cfg = await safeLoadConfigObj(F.config);
+        await doPullSingle(cfg, secretArg.trim(), F, log);
+        return;
+    }
+    // Multi
+    const cfg = await safeLoadConfigObj(F.config);
+    if (!cfg.envs?.length) {
+        log.warn(`pull: no entries in ${F.config} (run "pmt env init <project> <category>" and "pmt env create")`);
+        return;
+    }
+    for (const item of cfg.envs) {
+        const { name, secret } = item || {};
+        if (!name || !secret) {
+            log.warn(`pull: skipping ${name || "(no name)"} (missing secret)`);
+            continue;
+        }
+        await pullToFile(secret, name, F);
+        log.info(`pull: wrote ${name}`);
+    }
+}
+async function doPullSingle(cfg, secret, F, log) {
+    log.info(`pull: single secret → writing to ${F.path}`);
+    await pullToFile(secret, F.path, F);
+    const name = F.mapName || F.path;
+    const merged = upsertEnvMapping(cfg, name, secret);
+    await saveConfigObj(F.config, merged);
+    log.info(`pull: updated ${F.config} with { name: "${name}" }`);
+}
